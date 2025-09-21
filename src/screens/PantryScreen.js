@@ -1,7 +1,7 @@
 /**
  * Pantry Screen - Main food inventory management
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { ScrollView, TextInput, Image, ActivityIndicator, Alert, View, Text, TouchableOpacity, Modal, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -42,6 +42,12 @@ export function PantryScreen({ navigation }) {
   const [scanned, setScanned] = useState(false);
   const [lastScannedBarcode, setLastScannedBarcode] = useState(null);
   const [scanInProgress, setScanInProgress] = useState(false);
+  const [scannerLocked, setScannerLocked] = useState(false); // New global lock
+  
+  // Refs for debouncing
+  const lastScanTime = useRef(0);
+  const scanTimeout = useRef(null);
+  const processedBarcodes = useRef(new Set());
   
   // Form state
   const [name, setName] = useState("");
@@ -236,43 +242,115 @@ export function PantryScreen({ navigation }) {
       return;
     }
     // Reset all scanning state before opening
+    setScannerLocked(false);
     setScanned(false);
     setScanInProgress(false);
     setLastScannedBarcode(null);
+    // Clear processed barcodes when opening scanner
+    processedBarcodes.current.clear();
+    lastScanTime.current = 0;
     setShowScanner(true);
   }
 
   async function handleBarcodeScan({ data }) {
     const code = String(data);
+    const currentTime = Date.now();
     
-    // Prevent multiple scans of the same barcode or if scan is in progress
-    if (scanned || scanInProgress || lastScannedBarcode === code) {
+    // Ultra-aggressive debouncing - ignore scans within 5 seconds of each other
+    if (currentTime - lastScanTime.current < 5000) {
       return;
     }
     
-    setScanned(true); // Mark as scanned to prevent multiple triggers
-    setScanInProgress(true); // Set scan in progress flag
-    setLastScannedBarcode(code); // Store the scanned barcode
+    // Check if we've already processed this exact barcode recently
+    if (processedBarcodes.current.has(code)) {
+      return;
+    }
+    
+    // All the existing checks
+    if (scannerLocked || scanned || scanInProgress || lastScannedBarcode === code || !showScanner) {
+      return;
+    }
+    
+    // Clear any existing timeout
+    if (scanTimeout.current) {
+      clearTimeout(scanTimeout.current);
+    }
+    
+    // Update timestamp and add to processed set
+    lastScanTime.current = currentTime;
+    processedBarcodes.current.add(code);
+    
+    // Immediately lock everything
+    setScannerLocked(true);
+    setScanned(true);
+    setScanInProgress(true);
+    setShowScanner(false);
+    setLastScannedBarcode(code);
     setBarcode(code);
-    setShowScanner(false); // Close scanner immediately
     setLookupLoading(true);
+    
+    console.log(`Processing barcode: ${code} at ${currentTime}`); // Debug log
     
     try {
       const hit = await lookupOpenFoodFacts(code);
       if (hit) {
         setName(hit.displayName);
         setImageUrlPreview(hit.imageUrl || null);
-        Alert.alert("Produkt fundet!", `${hit.displayName} tilføjet til formularen.`);
+        Alert.alert(
+          "Produkt fundet!", 
+          `${hit.displayName} tilføjet til formularen.`,
+          [{ 
+            text: "OK", 
+            onPress: () => {
+              console.log('Alert dismissed by user'); // Debug log
+              resetScannerAfterDelay();
+            }
+          }],
+          { cancelable: false } // Prevent dismissal by touching outside
+        );
       } else {
-        Alert.alert("Ikke fundet", "Kunne ikke finde produkt for den stregkode.");
+        Alert.alert(
+          "Ikke fundet", 
+          "Kunne ikke finde produkt for den stregkode.",
+          [{ 
+            text: "OK", 
+            onPress: () => {
+              resetScannerAfterDelay();
+            }
+          }],
+          { cancelable: false }
+        );
       }
-    } catch {
-      Alert.alert("Opslag fejlede", "Der opstod en fejl under produktopslag.");
+    } catch (error) {
+      console.log('Lookup error:', error); // Debug log
+      Alert.alert(
+        "Opslag fejlede", 
+        "Der opstod en fejl under produktopslag.",
+        [{ 
+          text: "OK", 
+          onPress: () => {
+            resetScannerAfterDelay();
+          }
+        }],
+        { cancelable: false }
+      );
     } finally {
       setLookupLoading(false);
-      setScanInProgress(false); // Reset scan in progress flag
-      setLastLookupBarcode(code); // Store the scanned barcode
+      setScanInProgress(false);
+      setLastLookupBarcode(code);
     }
+  }
+  
+  function resetScannerAfterDelay() {
+    scanTimeout.current = setTimeout(() => {
+      setScannerLocked(false);
+      setScanned(false);
+      setLastScannedBarcode(null);
+      // Clear processed barcodes after 10 seconds to allow re-scanning
+      setTimeout(() => {
+        processedBarcodes.current.clear();
+      }, 10000);
+    }, 2000);
   }
 
   // Handle item deletion with confirmation
@@ -706,7 +784,7 @@ export function PantryScreen({ navigation }) {
               {/* Camera */}
               <CameraView
                 style={{ flex: 1 }}
-                onBarcodeScanned={scanned ? undefined : handleBarcodeScan}
+                onBarcodeScanned={(scannerLocked || scanned || scanInProgress) ? undefined : handleBarcodeScan}
                 barcodeScannerSettings={{
                   barcodeTypes: ["qr", "pdf417", "ean13", "ean8", "upc_a", "upc_e", "code128", "code39"],
                 }}
