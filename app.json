@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "FooGood",
+    "slug": "foogood",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "permissions": [
+        "CAMERA"
+      ]
+    },
+    "web": {},
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access camera for barcode scanning."
+        }
+      ]
+    ],
+    "sdkVersion": "54.0.0",
+    "extra": {
+      "azureOpenAI": {
+        "endpoint": "https://phpe2-mfslft3c-eastus2.cognitiveservices.azure.com/",
+        "apiKey": "7rpgAVfeiProELWJ2PF9RTmzulVahmRh9z7LdvA4DpRe0Cso0WjTJQQJ99BIACHYHv6XJ3w3AAAAACOGrRK6",
+        "deploymentName": "gpt-4.1-nano",
+        "apiVersion": "2024-12-01-preview"
+      }
+    }
+  }
+}
