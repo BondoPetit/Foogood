@@ -13,6 +13,14 @@ En React Native app til at holde styr på fødevarer og deres udløbsdatoer, med
 - **Kategori Management**: Tilpas og administrer dine kategorier
 - **Custom Icons**: Professionelle ikoner for alle app funktioner
 
+## 🎥 Demo
+
+App demo der viser alle hovedfunktioner:
+
+![FooGood Demo](https://youtube.com/shorts/K068hlKhzqg?feature=share)
+
+*Kort video der demonstrerer pantry management, AI opskrifter, scanner funktionalitet og indkøbsliste features*
+
 ## Teknologi Stack
 
 - **React Native + Expo SDK 54**
