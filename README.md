@@ -17,7 +17,7 @@ En React Native app til at holde styr på fødevarer og deres udløbsdatoer, med
 
 App demo der viser alle hovedfunktioner:
 
-![FooGood Demo](https://youtube.com/shorts/K068hlKhzqg?feature=share)
+(https://youtube.com/shorts/K068hlKhzqg?feature=share)
 
 *Kort video der demonstrerer pantry management, AI opskrifter, scanner funktionalitet og indkøbsliste features*
 
